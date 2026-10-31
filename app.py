@@ -1,577 +1,225 @@
 
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-from PIL import Image, ImageDraw
-from io import BytesIO
+from PIL import Image
+import io
 
-# ==================================================
-# CONFIGURACIÓN
-# ==================================================
+# ---------------- CONFIGURACIÓN ----------------
 
 st.set_page_config(
     page_title="Creative Notebook",
-    page_icon="✿",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    page_icon="🎨",
+    layout="wide"
 )
 
-# ==================================================
-# DISEÑO
-# ==================================================
+# ---------------- ESTILOS ----------------
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Nunito', sans-serif;
-}
-
 .stApp {
-    background:
-        radial-gradient(ellipse at 5% 10%, #FCEAF1, transparent 35%),
-        radial-gradient(ellipse at 95% 15%, #EAE8FA, transparent 35%),
-        radial-gradient(ellipse at 50% 100%, #E5F4EF, transparent 40%),
-        #F9F7FA;
-    min-height: 100vh;
+    background-color: #F8F6FC;
 }
 
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"] {
-    background: transparent;
+h1 {
+    color: #65577A;
+    text-align: center;
 }
 
-[data-testid="stHeader"] {
-    background: transparent;
+.subtitle {
+    color: #8A8197;
+    text-align: center;
+    margin-bottom: 20px;
 }
 
-[data-testid="stSidebar"] {
-    display: none;
+div.stButton > button,
+div.stDownloadButton > button {
+    border-radius: 12px;
+    border: 1px solid #E4DCEC;
+    background-color: white;
+    color: #65577A;
+    font-weight: 600;
+    width: 100%;
+    min-height: 40px;
 }
 
-.block-container {
-    max-width: 100% !important;
-    padding: 1rem 2rem 1rem 2rem !important;
+div.stButton > button:hover,
+div.stDownloadButton > button:hover {
+    border-color: #BDA9D6;
+    color: #65577A;
 }
 
-.hero {
-    background: linear-gradient(110deg, #F8DCE8, #FBEBD3, #E9E3FA);
-    border: 1px solid white;
-    border-radius: 18px;
-    padding: 12px 22px;
-    margin-bottom: 12px;
-}
-
-.hero h1 {
-    color: #51485F;
-    font-size: 1.65rem;
-    font-weight: 800;
-    margin: 0;
-}
-
-.hero p {
-    color: #82768A;
-    font-size: .85rem;
-    margin: 0;
-}
-
-.toolbar {
-    background: rgba(255,255,255,.92);
-    border: 1px solid #E9E1ED;
-    border-radius: 16px;
-    padding: 10px 13px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 15px rgba(90,70,110,.05);
-}
-
-.canvas-area {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255,255,255,.55);
-    border: 1px solid #E9E1ED;
-    border-radius: 20px;
-    padding: 14px;
-    box-shadow: 0 6px 22px rgba(90,70,110,.05);
-}
-
-.stButton > button,
-.stDownloadButton > button {
-    border-radius: 11px;
-    border: 1px solid #E6DCEB;
-    background: #FFFFFF;
-    color: #5B5066;
-    font-weight: 700;
-    min-height: 39px;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover {
-    background: #F6ECFA;
-    border-color: #D5BCE3;
-    color: #51445F;
-}
-
-.stPopover > button {
-    border-radius: 11px;
-    background: white;
-    border: 1px solid #E6DCEB;
-    color: #62566D;
-    min-height: 39px;
-}
-
-[data-testid="stPopoverBody"] {
-    background: #FFFCFF;
-    border: 1px solid #E9DFED;
-    border-radius: 16px;
-}
-
-div[data-testid="stHorizontalBlock"] {
-    align-items: center;
-}
-
-footer, #MainMenu {
-    visibility: hidden;
-}
-
-@media (max-width: 900px) {
-    .block-container {
-        padding: .6rem !important;
-    }
+section[data-testid="stSidebar"] {
+    background-color: #F0EAF7;
 }
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- ESTADO ----------------
 
-# ==================================================
-# ESTADOS
-# ==================================================
+if "canvas_version" not in st.session_state:
+    st.session_state.canvas_version = 0
 
-defaults = {
-    "canvas_version": 0,
-    "saved_drawing": None,
-    "selected_color": "#514A7E",
-    "paper_color": "#FFFFFF",
-    "paper_pattern": "Lisa",
-    "tool": "Lápiz",
-    "brush_size": 6,
-    "opacity": 100
-}
+if "selected_color" not in st.session_state:
+    st.session_state.selected_color = "#65577A"
 
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+if "brush_size" not in st.session_state:
+    st.session_state.brush_size = 5
 
+if "tool" not in st.session_state:
+    st.session_state.tool = "Lápiz"
 
-# ==================================================
-# FUNCIONES
-# ==================================================
+if "last_image" not in st.session_state:
+    st.session_state.last_image = None
 
-CANVAS_WIDTH = 900
-CANVAS_HEIGHT = 520
+# ---------------- ENCABEZADO ----------------
 
-
-def create_paper(color, pattern):
-    """Genera una hoja horizontal con el patrón elegido."""
-
-    paper = Image.new(
-        "RGB",
-        (CANVAS_WIDTH, CANVAS_HEIGHT),
-        color
-    )
-
-    draw = ImageDraw.Draw(paper)
-    pattern_color = "#DDE0E8"
-
-    if pattern == "Cuadriculada":
-
-        step = 28
-
-        for x in range(0, CANVAS_WIDTH, step):
-            draw.line(
-                (x, 0, x, CANVAS_HEIGHT),
-                fill=pattern_color,
-                width=1
-            )
-
-        for y in range(0, CANVAS_HEIGHT, step):
-            draw.line(
-                (0, y, CANVAS_WIDTH, y),
-                fill=pattern_color,
-                width=1
-            )
-
-    elif pattern == "Punteada":
-
-        step = 24
-
-        for x in range(12, CANVAS_WIDTH, step):
-            for y in range(12, CANVAS_HEIGHT, step):
-                draw.ellipse(
-                    (x-1, y-1, x+1, y+1),
-                    fill=pattern_color
-                )
-
-    elif pattern == "Rayada":
-
-        for y in range(35, CANVAS_HEIGHT, 35):
-            draw.line(
-                (0, y, CANVAS_WIDTH, y),
-                fill=pattern_color,
-                width=1
-            )
-
-    return paper
-
-
-def make_png(image_data):
-    """Convierte el resultado del lienzo en PNG."""
-
-    image = Image.fromarray(image_data).convert("RGBA")
-
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-
-    return buffer.getvalue()
-
-
-# ==================================================
-# CABECERA
-# ==================================================
-
-st.markdown("""
-<div class="hero">
-    <h1>✿ Creative Notebook</h1>
-    <p>Your little creative space · Dibuja, experimenta y crea.</p>
-</div>
-""", unsafe_allow_html=True)
-
-
-# ==================================================
-# BARRA SUPERIOR: ACCIONES PRINCIPALES
-# ==================================================
-
-st.markdown('<div class="toolbar">', unsafe_allow_html=True)
-
-top_left, top_middle, top_right = st.columns(
-    [2.2, 2, 2.2]
-)
-
-with top_left:
-
-    st.markdown("**✦ Acciones rápidas**")
-
-with top_middle:
-
-    st.caption("Deshacer y rehacer: controles sobre el lienzo")
-
-with top_right:
-
-    st.caption("Creative Notebook · Hoja horizontal")
-
-# Placeholders para los botones que necesitan el resultado del lienzo
-action_placeholder = st.empty()
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ==================================================
-# BARRA DE HERRAMIENTAS
-# ==================================================
-
-st.markdown('<div class="toolbar">', unsafe_allow_html=True)
-
-tool_col, size_col, opacity_col, color_col, paper_col = st.columns(
-    [2.1, 1.5, 1.5, 1.7, 1.7]
-)
-
-with tool_col:
-
-    tool_options = [
-        "✏️ Lápiz",
-        "🖌️ Pincel",
-        "🖍️ Marcador",
-        "📏 Línea",
-        "▭ Rectángulo",
-        "⭕ Círculo",
-        "⬡ Polígono",
-        "• Punto",
-        "T Texto",
-        "🧽 Borrador"
-    ]
-
-    selected_tool = st.selectbox(
-        "Herramienta",
-        tool_options,
-        index=tool_options.index(
-            st.session_state.tool
-        ) if st.session_state.tool in tool_options else 0
-    )
-
-    st.session_state.tool = selected_tool
-
-
-with size_col:
-
-    st.session_state.brush_size = st.slider(
-        "Grosor",
-        1,
-        35,
-        st.session_state.brush_size
-    )
-
-
-with opacity_col:
-
-    st.session_state.opacity = st.slider(
-        "Opacidad",
-        10,
-        100,
-        st.session_state.opacity,
-        step=5
-    )
-
-
-with color_col:
-
-    st.session_state.selected_color = st.color_picker(
-        "Color del trazo",
-        st.session_state.selected_color,
-        key="drawing_color"
-    )
-
-
-with paper_col:
-
-    with st.popover("📄 Papel y formato", use_container_width=True):
-
-        st.markdown("### Diseño de la hoja")
-
-        paper_pattern = st.selectbox(
-            "Tipo de papel",
-            [
-                "Lisa",
-                "Cuadriculada",
-                "Punteada",
-                "Rayada"
-            ],
-            index=[
-                "Lisa",
-                "Cuadriculada",
-                "Punteada",
-                "Rayada"
-            ].index(st.session_state.paper_pattern)
-        )
-
-        paper_colors = {
-            "Blanco": "#FFFFFF",
-            "Crema": "#FFF9EE",
-            "Rosa pastel": "#FFF0F4",
-            "Lila pastel": "#F5F0FF",
-            "Celeste pastel": "#EEF8FF",
-            "Menta": "#F0FAF4"
-        }
-
-        paper_name = st.selectbox(
-            "Color de la hoja",
-            list(paper_colors.keys()) + ["Personalizado"]
-        )
-
-        if paper_name == "Personalizado":
-            paper_color = st.color_picker(
-                "Elige tu color de papel",
-                st.session_state.paper_color,
-                key="paper_custom_color"
-            )
-        else:
-            paper_color = paper_colors[paper_name]
-
-        if st.button(
-            "Aplicar papel",
-            use_container_width=True
-        ):
-            st.session_state.paper_pattern = paper_pattern
-            st.session_state.paper_color = paper_color
-
-            # Cambia la versión para aplicar el nuevo fondo
-            st.session_state.canvas_version += 1
-
-            st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ==================================================
-# LIENZO CENTRAL
-# ==================================================
-
+st.markdown("<h1>🎨 Creative Notebook</h1>", unsafe_allow_html=True)
 st.markdown(
-    '<div class="canvas-area">',
+    '<p class="subtitle">Un espacio para dibujar, crear y dejar volar tu imaginación.</p>',
     unsafe_allow_html=True
 )
 
-tool_modes = {
-    "✏️ Lápiz": "freedraw",
-    "🖌️ Pincel": "freedraw",
-    "🖍️ Marcador": "freedraw",
-    "📏 Línea": "line",
-    "▭ Rectángulo": "rect",
-    "⭕ Círculo": "circle",
-    "⬡ Polígono": "polygon",
-    "• Punto": "point",
-    "T Texto": "text",
-    "🧽 Borrador": "freedraw"
+# ---------------- BOTONES PRINCIPALES ----------------
+
+st.markdown("### Acciones principales")
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    if st.button("🗑️ Borrar hoja"):
+        st.session_state.canvas_version += 1
+        st.session_state.last_image = None
+        st.rerun()
+
+with c2:
+    if st.button("📄 Nuevo tablero"):
+        st.session_state.canvas_version += 1
+        st.session_state.last_image = None
+        st.rerun()
+
+with c3:
+    if st.button("↩️ Reiniciar"):
+        st.session_state.canvas_version += 1
+        st.session_state.last_image = None
+        st.rerun()
+
+st.divider()
+
+# ---------------- HERRAMIENTAS ----------------
+
+st.markdown("### Herramientas de dibujo")
+
+col1, col2, col3, col4 = st.columns([1.5, 1, 1, 1])
+
+with col1:
+    tool = st.selectbox(
+        "Herramienta",
+        ["Lápiz", "Pincel", "Marcador", "Borrador", "Línea", "Rectángulo", "Círculo"]
+    )
+
+with col2:
+    brush_size = st.slider(
+        "Grosor",
+        min_value=1,
+        max_value=30,
+        value=5
+    )
+
+with col3:
+    selected_color = st.color_picker(
+        "Color",
+        value="#65577A"
+    )
+
+with col4:
+    background_color = st.selectbox(
+        "Papel",
+        ["Blanco", "Crema", "Rosa", "Lila", "Celeste", "Menta"]
+    )
+
+# ---------------- CONFIGURAR PAPEL ----------------
+
+paper_colors = {
+    "Blanco": "#FFFFFF",
+    "Crema": "#FFF8E9",
+    "Rosa": "#FCE8EF",
+    "Lila": "#F0E9FA",
+    "Celeste": "#E8F4FC",
+    "Menta": "#E8F5ED"
 }
 
-stroke_color = st.session_state.selected_color
-brush_size = st.session_state.brush_size
-opacity = st.session_state.opacity
+paper = paper_colors[background_color]
 
-if st.session_state.tool == "✏️ Lápiz":
-    brush_size = min(brush_size, 5)
+# ---------------- CONFIGURAR HERRAMIENTA ----------------
 
-elif st.session_state.tool == "🖌️ Pincel":
-    brush_size = max(brush_size, 9)
+drawing_modes = {
+    "Lápiz": "freedraw",
+    "Pincel": "freedraw",
+    "Marcador": "freedraw",
+    "Borrador": "freedraw",
+    "Línea": "line",
+    "Rectángulo": "rect",
+    "Círculo": "circle"
+}
 
-elif st.session_state.tool == "🖍️ Marcador":
-    brush_size = max(brush_size, 14)
-    opacity = min(opacity, 45)
+drawing_mode = drawing_modes[tool]
 
-elif st.session_state.tool == "🧽 Borrador":
-    stroke_color = st.session_state.paper_color
-    opacity = 100
+if tool == "Pincel":
+    brush_size = min(30, brush_size + 3)
 
-# Simulación de opacidad
-def blend_colors(foreground, background, alpha):
+if tool == "Marcador":
+    brush_size = min(30, brush_size + 8)
 
-    fg = tuple(
-        int(foreground[i:i+2], 16)
-        for i in (1, 3, 5)
-    )
+if tool == "Borrador":
+    selected_color = paper
 
-    bg = tuple(
-        int(background[i:i+2], 16)
-        for i in (1, 3, 5)
-    )
+# ---------------- TABLERO ----------------
 
-    result = tuple(
-        round(fg[i] * alpha / 100 + bg[i] * (1-alpha/100))
-        for i in range(3)
-    )
-
-    return "#{:02X}{:02X}{:02X}".format(*result)
-
-
-stroke_color = blend_colors(
-    stroke_color,
-    st.session_state.paper_color,
-    opacity
-)
-
-paper = create_paper(
-    st.session_state.paper_color,
-    st.session_state.paper_pattern
-)
+st.markdown("### Mi tablero")
 
 canvas_result = st_canvas(
-    fill_color=st.session_state.selected_color,
+    fill_color="rgba(255, 255, 255, 0.3)",
     stroke_width=brush_size,
-    stroke_color=stroke_color,
-    background_image=paper,
-    background_image_fit="contain",
-    height=CANVAS_HEIGHT,
-    width=CANVAS_WIDTH,
-    drawing_mode=tool_modes[st.session_state.tool],
-    initial_drawing=st.session_state.saved_drawing,
-    point_display_radius=4,
-    update_streamlit=True,
+    stroke_color=selected_color,
+    background_color=paper,
+    height=450,
+    width=850,
+    drawing_mode=drawing_mode,
     display_toolbar=True,
-    return_image_data=True,
     key=f"creative_canvas_{st.session_state.canvas_version}"
 )
 
-st.markdown('</div>', unsafe_allow_html=True)
+# ---------------- GUARDAR Y DESCARGAR ----------------
 
-st.caption(
-    "✿ Tu hoja horizontal está lista. "
-    "Puedes deshacer, rehacer y editar tus trazos desde la barra del lienzo."
-)
+if canvas_result.image_data is not None:
+    image = Image.fromarray(canvas_result.image_data.astype("uint8"))
+    image = image.convert("RGB")
 
+    st.session_state.last_image = image
 
-# ==================================================
-# GUARDAR DIBUJO ACTUAL
-# ==================================================
+st.divider()
+st.markdown("### Guardar mi creación")
 
-if canvas_result.json_data is not None:
-    st.session_state.saved_drawing = canvas_result.json_data
+if st.session_state.last_image is not None:
 
+    buffer = io.BytesIO()
+    st.session_state.last_image.save(buffer, format="PNG")
+    image_bytes = buffer.getvalue()
 
-# ==================================================
-# BOTONES SUPERIORES
-# ==================================================
-
-with action_placeholder.container():
-
-    btn_clear, btn_new, btn_save, btn_download = st.columns(
-        [1.3, 1.3, 1.5, 1.7]
+    st.download_button(
+        label="⬇️ Descargar mi dibujo en PNG",
+        data=image_bytes,
+        file_name="mi_creacion.png",
+        mime="image/png",
+        use_container_width=True
     )
 
-    with btn_clear:
+else:
+    st.info("Cuando realices un dibujo, podrás descargarlo aquí.")
 
-        if st.button(
-            "🗑️ Borrar hoja",
-            use_container_width=True
-        ):
-            st.session_state.saved_drawing = None
-            st.session_state.canvas_version += 1
-            st.rerun()
-
-    with btn_new:
-
-        if st.button(
-            "✦ Nuevo tablero",
-            use_container_width=True
-        ):
-            st.session_state.saved_drawing = None
-            st.session_state.selected_color = "#514A7E"
-            st.session_state.paper_color = "#FFFFFF"
-            st.session_state.paper_pattern = "Lisa"
-            st.session_state.tool = "✏️ Lápiz"
-            st.session_state.canvas_version += 1
-            st.rerun()
-
-    with btn_save:
-
-        if canvas_result.image_data is not None:
-
-            st.download_button(
-                "💾 Guardar imagen",
-                data=make_png(canvas_result.image_data),
-                file_name="mi_creative_notebook.png",
-                mime="image/png",
-                use_container_width=True
-            )
-
-    with btn_download:
-
-        if canvas_result.image_data is not None:
-
-            st.download_button(
-                "⬇️ Descargar PNG",
-                data=make_png(canvas_result.image_data),
-                file_name="mi_dibujo.png",
-                mime="image/png",
-                use_container_width=True
-            )
-
-
-# ==================================================
-# PIE
-# ==================================================
-
-st.markdown("""
-<div style="text-align:center;color:#A397AA;
-font-size:12px;padding-top:10px;">
-Creative Notebook · Crea a tu manera ✿
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align:center; color:#A49AAA; font-size:12px;'>"
+    "Creative Notebook · Tu espacio creativo"
+    "</p>",
+    unsafe_allow_html=True
+)
