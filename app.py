@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# ESTILOS GENERALES
+# ESTILOS
 # =====================================================
 
 st.markdown("""
@@ -48,8 +48,9 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    max-width: 100% !important;
-    padding: 1rem 1.3rem 1rem 1.3rem !important;
+    max-width: 1250px !important;
+    padding: 1rem 1rem 1rem 1rem !important;
+    margin: 0 auto !important;
 }
 
 .hero {
@@ -80,7 +81,7 @@ html, body, [class*="css"] {
     background: rgba(255,255,255,.76);
     border: 1px solid #E9E2ED;
     border-radius: 20px;
-    padding: 12px;
+    padding: 10px;
     box-shadow: 0 7px 25px rgba(90,70,110,.06);
     display: flex;
     flex-direction: column;
@@ -123,6 +124,7 @@ html, body, [class*="css"] {
     color: #756982;
     font-weight: 800;
     font-size: .9rem;
+    text-align: center;
     margin-bottom: 5px;
 }
 
@@ -131,8 +133,9 @@ footer, #MainMenu {
 }
 
 [data-testid="stVerticalBlock"] {
-    gap: .55rem;
+    gap: .45rem;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -167,6 +170,7 @@ for key, value in defaults.items():
 # =====================================================
 
 def make_paper(color, pattern, width, height):
+
     image = Image.new("RGB", (width, height), color)
     draw = ImageDraw.Draw(image)
 
@@ -174,19 +178,23 @@ def make_paper(color, pattern, width, height):
 
     if pattern == "Cuadriculado":
         step = 30
+
         for x in range(0, width, step):
             draw.line((x, 0, x, height), fill=pattern_color, width=1)
+
         for y in range(0, height, step):
             draw.line((0, y, width, y), fill=pattern_color, width=1)
 
     elif pattern == "Punteado":
         step = 25
+
         for x in range(12, width, step):
             for y in range(12, height, step):
                 draw.ellipse((x-1, y-1, x+1, y+1), fill=pattern_color)
 
     elif pattern == "Rayado":
         step = 35
+
         for y in range(step, height, step):
             draw.line((0, y, width, y), fill=pattern_color, width=1)
 
@@ -194,12 +202,14 @@ def make_paper(color, pattern, width, height):
 
 
 def export_png(image_array):
+
     image = Image.fromarray(
         np.asarray(image_array).astype("uint8")
     ).convert("RGBA")
 
     buffer = BytesIO()
     image.save(buffer, format="PNG")
+
     return buffer.getvalue()
 
 
@@ -208,6 +218,7 @@ def change_canvas():
 
 
 def blend(fg, bg, alpha):
+
     fg_rgb = tuple(int(fg[i:i+2], 16) for i in (1, 3, 5))
     bg_rgb = tuple(int(bg[i:i+2], 16) for i in (1, 3, 5))
 
@@ -243,6 +254,7 @@ if st.session_state.finished:
     st.markdown("## ✨ Tu creación está lista")
 
     if st.session_state.final_image is not None:
+
         st.image(
             st.session_state.final_image,
             use_container_width=True
@@ -263,11 +275,8 @@ if st.session_state.finished:
 
 
 # =====================================================
-# TAMAÑOS DEL TABLERO
+# TAMAÑOS DE PAPEL
 # =====================================================
-
-# Tableros más compactos para dar protagonismo
-# a las herramientas y los ajustes.
 
 paper_sizes = {
     "A4 horizontal": (790, 560),
@@ -284,7 +293,7 @@ canvas_width, canvas_height = paper_sizes[
 
 
 # =====================================================
-# DETECTAR CAMBIOS DE CONFIGURACIÓN
+# DETECTAR CAMBIOS
 # =====================================================
 
 config = (
@@ -302,26 +311,47 @@ elif st.session_state.last_config != config:
 
 
 # =====================================================
-# ACCIONES SUPERIORES
+# ACCIONES SUPERIORES CENTRADAS
 # =====================================================
 
-st.markdown('<div class="action-title">✦ Acciones principales</div>',
-            unsafe_allow_html=True)
+st.markdown(
+    '<div class="action-title">✦ Acciones principales</div>',
+    unsafe_allow_html=True
+)
 
-action_area = st.container()
+_, action1, action2, _ = st.columns([1, 1.5, 1.5, 1])
+
+with action1:
+
+    if st.button(
+        "🗑️ Borrar hoja",
+        use_container_width=True,
+        key="top_clear"
+    ):
+        st.session_state.saved_drawing = None
+        st.session_state.finish_requested = False
+        change_canvas()
+        st.rerun()
+
+with action2:
+
+    # La descarga se crea después de obtener la imagen del tablero.
+    download_placeholder = st.empty()
+
 
 # =====================================================
-# DISTRIBUCIÓN PRINCIPAL
+# DISTRIBUCIÓN CENTRAL
 # =====================================================
 
 left_bar, drawing_area, right_bar = st.columns(
-    [0.65, 10, 0.65],
-    gap="small"
+    [0.75, 8, 0.75],
+    gap="small",
+    vertical_alignment="center"
 )
 
 
 # =====================================================
-# BARRA IZQUIERDA: HERRAMIENTAS
+# HERRAMIENTAS IZQUIERDAS
 # =====================================================
 
 with left_bar:
@@ -357,7 +387,7 @@ with left_bar:
 
 
 # =====================================================
-# BARRA DERECHA: AJUSTES
+# AJUSTES DERECHOS
 # =====================================================
 
 with right_bar:
@@ -397,6 +427,7 @@ with right_bar:
         }
 
         for name, color in palette.items():
+
             if st.button(
                 f"● {name}",
                 key=f"color_{name}",
@@ -456,15 +487,18 @@ with right_bar:
         }
 
         if new_color == "Personalizado":
+
             chosen_paper_color = st.color_picker(
                 "Elige el color del papel",
                 st.session_state.paper_color,
                 key="custom_paper"
             )
+
         else:
             chosen_paper_color = paper_colors[new_color]
 
         if st.button("Aplicar cambios al papel", use_container_width=True):
+
             st.session_state.paper_size = new_size
             st.session_state.paper_type = new_pattern
             st.session_state.paper_color = chosen_paper_color
@@ -475,31 +509,31 @@ with right_bar:
         st.markdown("### Acciones")
 
         if st.button("🗑️ Limpiar hoja", use_container_width=True):
+
             st.session_state.saved_drawing = None
             change_canvas()
             st.rerun()
 
         if st.button("↻ Nuevo cuaderno", use_container_width=True):
+
             st.session_state.saved_drawing = None
             st.session_state.selected_color = "#514A7E"
             st.session_state.paper_color = "#FFFFFF"
             st.session_state.paper_type = "Lisa"
             st.session_state.paper_size = "A4 horizontal"
             st.session_state.last_config = None
+
             change_canvas()
             st.rerun()
 
         if st.button("✨ Terminar dibujo", use_container_width=True):
+
             st.session_state.finish_requested = True
             st.rerun()
 
-    with st.popover("⬇️", help="Descargar", use_container_width=True):
-        st.markdown("### Descargar")
-        st.caption("También puedes guardar tu dibujo desde el botón superior.")
-
 
 # =====================================================
-# ÁREA CENTRAL DE DIBUJO
+# TABLERO CENTRAL
 # =====================================================
 
 with drawing_area:
@@ -574,52 +608,28 @@ with drawing_area:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Conservar el dibujo
     if canvas_result.json_data is not None:
         st.session_state.saved_drawing = canvas_result.json_data
 
-    # Preparar imagen actual para descargar
+    # Imagen para descargar
     if canvas_result.image_data is not None:
+
         current_image = np.asarray(
             canvas_result.image_data
         ).astype("uint8")
+
     else:
-        current_image = np.asarray(paper_image.convert("RGBA"))
+
+        current_image = np.asarray(
+            paper_image.convert("RGBA")
+        )
 
     current_png = export_png(current_image)
 
-    # Terminar dibujo
-    if st.session_state.finish_requested:
+    # Insertar botón de descarga en la barra superior
+    with download_placeholder.container():
 
-        if canvas_result.image_data is not None:
-            st.session_state.final_image = current_image
-            st.session_state.finished = True
-            st.session_state.finish_requested = False
-            st.rerun()
-        else:
-            st.warning("Primero realiza un dibujo.")
-            st.session_state.finish_requested = False
-
-
-# =====================================================
-# MOSTRAR ACCIONES ARRIBA DEL TABLERO
-# =====================================================
-
-with action_area:
-
-    action1, action2, action3 = st.columns([1, 1, 3])
-
-    with action1:
-        if st.button(
-            "🗑️ Borrar hoja",
-            use_container_width=True,
-            key="top_clear"
-        ):
-            st.session_state.saved_drawing = None
-            st.session_state.finish_requested = False
-            change_canvas()
-            st.rerun()
-
-    with action2:
         st.download_button(
             "⬇️ Guardar imagen",
             data=current_png,
@@ -629,11 +639,20 @@ with action_area:
             key="top_download"
         )
 
-    with action3:
-        st.caption(
-            "✦ Tus herramientas y ajustes están a los lados. "
-            "¡Crea a tu manera!"
-        )
+    # Terminar dibujo
+    if st.session_state.finish_requested:
+
+        if canvas_result.image_data is not None:
+
+            st.session_state.final_image = current_image
+            st.session_state.finished = True
+            st.session_state.finish_requested = False
+            st.rerun()
+
+        else:
+
+            st.warning("Primero realiza un dibujo.")
+            st.session_state.finish_requested = False
 
 
 # =====================================================
