@@ -1,39 +1,123 @@
-import streamlit as st
-from streamlit_drawable_canvas import st_canvas
+        "Menta": "#A8DCC5",
+        "Celeste": "#9CCFE5",
+        "Lavanda": "#BDB0E8",
+        "Lila": "#D9A9D8",
+        "Coral": "#E98282",
+        "Carbón": "#454052",
+        "Blanco": "#FFFFFF",
+    }
 
-st.title("Tablero para dibujo")
+    palette_cols = st.columns(len(palette) + 1)
+    for index, (name, color) in enumerate(palette.items()):
+        with palette_cols[index]:
+            is_selected = st.session_state.selected_color == color
+            button_label = ("✓ " if is_selected else "") + name
+            if st.button(
+                button_label,
+                key=f"palette_{name}",
+                help=f"Elegir {name.lower()}",
+                use_container_width=True
+            ):
+                st.session_state.selected_color = color
+                st.rerun()
 
-with st.sidebar:
-    st.subheader("Propiedades del Tablero")
+    with palette_cols[-1]:
+        custom_color = st.color_picker(
+            "Personalizado",
+            value=st.session_state.selected_color,
+            key="custom_color_picker"
+        )
+        if custom_color != st.session_state.selected_color:
+            st.session_state.selected_color = custom_color
 
-    # Canvas dimensions
-    st.subheader("Dimensiones del Tablero")
-    canvas_width = st.slider("Ancho del tablero", 300, 700, 500, 50)
-    canvas_height = st.slider("Alto del tablero", 200, 600, 300, 50)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Drawing mode selector
-    drawing_mode = st.selectbox(
-        "Herramienta de Dibujo:",
-        ("freedraw", "line", "rect", "circle", "transform", "polygon", "point"),
+    # -----------------------------------------------------
+    # CONFIGURACIÓN SEGÚN HERRAMIENTA
+    # -----------------------------------------------------
+    drawing_modes = {
+        "✏️ Lápiz": "freedraw",
+        "🖌️ Pincel": "freedraw",
+        "🖍️ Marcador": "freedraw",
+        "📏 Línea": "line",
+        "▭ Rectángulo": "rect",
+        "⭕ Círculo": "circle",
+        "⬡ Polígono": "polygon",
+        "⌖ Seleccionar / mover": "transform",
+        "🧽 Borrador": "freedraw",
+        "• Punto": "point",
+    }
+
+    drawing_mode = drawing_modes[tool_label]
+    current_color = background_color if tool_label == "🧽 Borrador" else st.session_state.selected_color
+
+    # Diferencia visual entre lápiz, pincel y marcador mediante tamaño/opacidad.
+    effective_opacity = opacity
+    if tool_label == "✏️ Lápiz":
+        effective_opacity = min(opacity, 85)
+    elif tool_label == "🖍️ Marcador":
+        effective_opacity = min(opacity, 45)
+
+    stroke_color = hex_to_rgba(current_color, effective_opacity)
+    effective_width = brush_size
+    if tool_label == "🖍️ Marcador":
+        effective_width = max(brush_size, 12)
+
+    # -----------------------------------------------------
+    # LIENZO
+    # -----------------------------------------------------
+    st.markdown(
+        '<div class="section-label">03 · Mi espacio de dibujo</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown('<div class="canvas-shell">', unsafe_allow_html=True)
+
+    canvas_result = st_canvas(
+        fill_color=hex_to_rgba(st.session_state.selected_color, 22),
+        stroke_width=effective_width,
+        stroke_color=stroke_color,
+        background_color=background_color,
+        height=520,
+        width=1000,
+        drawing_mode=drawing_mode,
+        display_toolbar=False,
+        update_streamlit=True,
+        key=f"creative_canvas_{st.session_state.canvas_version}",
     )
 
-    # Stroke width slider
-    stroke_width = st.slider("Selecciona el ancho de línea", 1, 30, 15)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.caption("Consejo: elige una herramienta y un color, y dibuja directamente sobre el papel.")
 
-    # Stroke color picker
-    stroke_color = st.color_picker("Color de trazo", "#FFFFFF")
+    # -----------------------------------------------------
+    # ACCIONES
+    # -----------------------------------------------------
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">04 · Acciones</div>', unsafe_allow_html=True)
 
-    # Background color
-    bg_color = st.color_picker("Color de fondo", "#000000")
+    action_left, action_middle, action_right = st.columns([1, 1, 1.3])
 
-# Create a canvas component with dynamic key
-canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",
-    stroke_width=stroke_width,
-    stroke_color=stroke_color,
-    background_color=bg_color,
-    height=canvas_height,
-    width=canvas_width,
-    drawing_mode=drawing_mode,
-    key=f"canvas_{canvas_width}_{canvas_height}",
-)
+    with action_left:
+        if st.button("🗑️ Limpiar lienzo", use_container_width=True):
+            st.session_state.canvas_version += 1
+            st.rerun()
+
+    with action_middle:
+        if st.button("↻ Nuevo cuaderno", use_container_width=True):
+            st.session_state.canvas_version += 1
+            st.session_state.selected_color = "#514A7E"
+            st.rerun()
+
+    with action_right:
+        if st.button("✨ Terminar creación", type="primary", use_container_width=True):
+            if canvas_result.image_data is not None:
+                st.session_state.final_image = np.asarray(
+                    canvas_result.image_data
+                ).astype("uint8")
+                st.session_state.finished = True
+                st.rerun()
+            else:
+                st.info("Primero realiza un dibujo en tu lienzo.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.caption("Creative Notebook · Crea a tu manera ✿")
