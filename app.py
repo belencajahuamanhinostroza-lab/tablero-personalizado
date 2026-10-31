@@ -3,10 +3,7 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image, ImageDraw
 from io import BytesIO
-
-# ==================================================
-# CONFIGURACIÓN
-# ==================================================
+import numpy as np
 
 st.set_page_config(
     page_title="Creative Notebook",
@@ -15,32 +12,28 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ==================================================
-# DISEÑO
-# ==================================================
+# =====================================================
+# ESTILOS
+# =====================================================
 
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {
+* {
     font-family: 'Nunito', sans-serif;
 }
 
 .stApp {
     background:
-        radial-gradient(ellipse at 5% 10%, #FCEAF1, transparent 35%),
-        radial-gradient(ellipse at 95% 15%, #EAE8FA, transparent 35%),
-        radial-gradient(ellipse at 50% 100%, #E5F4EF, transparent 40%),
-        #F9F7FA;
-    min-height: 100vh;
+        radial-gradient(ellipse at 10% 10%, #FCEAF1 0%, transparent 35%),
+        radial-gradient(ellipse at 90% 20%, #EAE8FA 0%, transparent 35%),
+        radial-gradient(ellipse at 50% 100%, #E6F5F1 0%, transparent 45%),
+        #F8F6FA;
 }
 
 [data-testid="stAppViewContainer"],
-[data-testid="stMain"] {
-    background: transparent;
-}
-
+[data-testid="stMain"],
 [data-testid="stHeader"] {
     background: transparent;
 }
@@ -50,16 +43,20 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    max-width: 100% !important;
-    padding: 1rem 2rem 1rem 2rem !important;
+    max-width: 1500px !important;
+    padding: 1rem 1.2rem !important;
+    margin: auto !important;
 }
 
 .hero {
-    background: linear-gradient(110deg, #F8DCE8, #FBEBD3, #E9E3FA);
+    background: linear-gradient(110deg,#F8DCE8,#FBEBD3,#E9E3FA);
     border: 1px solid white;
     border-radius: 18px;
     padding: 12px 22px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .hero h1 {
@@ -75,32 +72,46 @@ html, body, [class*="css"] {
     margin: 0;
 }
 
-.toolbar {
-    background: rgba(255,255,255,.92);
-    border: 1px solid #E9E1ED;
-    border-radius: 16px;
-    padding: 10px 13px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 15px rgba(90,70,110,.05);
+.intro-panel {
+    background: rgba(255,255,255,.65);
+    border: 1px solid #E9DFED;
+    border-radius: 20px;
+    padding: 18px;
+    min-height: 650px;
+    box-shadow: 0 7px 25px rgba(90,70,110,.05);
 }
 
-.canvas-area {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255,255,255,.55);
-    border: 1px solid #E9E1ED;
-    border-radius: 20px;
-    padding: 14px;
-    box-shadow: 0 6px 22px rgba(90,70,110,.05);
+.intro-panel h3 {
+    color: #65566F;
+    margin-top: 5px;
+}
+
+.intro-panel p {
+    color: #82768A;
+    font-size: .88rem;
+    line-height: 1.65;
+}
+
+.intro-panel hr {
+    border: none;
+    border-top: 1px solid #EAE0ED;
+    margin: 18px 0;
+}
+
+.canvas-card {
+    background: rgba(255,255,255,.78);
+    border: 1px solid #E9E2ED;
+    border-radius: 18px;
+    padding: 10px;
+    box-shadow: 0 7px 25px rgba(90,70,110,.06);
 }
 
 .stButton > button,
 .stDownloadButton > button {
-    border-radius: 11px;
-    border: 1px solid #E6DCEB;
-    background: #FFFFFF;
-    color: #5B5066;
+    border-radius: 12px;
+    border: 1px solid #E9DFED;
+    background: rgba(255,255,255,.95);
+    color: #63566E;
     font-weight: 700;
     min-height: 39px;
 }
@@ -108,54 +119,61 @@ html, body, [class*="css"] {
 .stButton > button:hover,
 .stDownloadButton > button:hover {
     background: #F6ECFA;
-    border-color: #D5BCE3;
-    color: #51445F;
+    border-color: #D8C1E5;
 }
 
 .stPopover > button {
-    border-radius: 11px;
+    border-radius: 12px;
     background: white;
-    border: 1px solid #E6DCEB;
-    color: #62566D;
-    min-height: 39px;
+    border: 1px solid #E9DFED;
+    color: #665A72;
+    min-height: 42px;
+    font-size: 1.1rem;
 }
 
 [data-testid="stPopoverBody"] {
     background: #FFFCFF;
     border: 1px solid #E9DFED;
-    border-radius: 16px;
+    border-radius: 15px;
 }
 
-div[data-testid="stHorizontalBlock"] {
-    align-items: center;
+.section-label {
+    color: #756982;
+    font-size: .9rem;
+    font-weight: 800;
+    margin-bottom: 5px;
 }
 
 footer, #MainMenu {
     visibility: hidden;
 }
 
-@media (max-width: 900px) {
-    .block-container {
-        padding: .6rem !important;
-    }
+[data-testid="stVerticalBlock"] {
+    gap: .45rem;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==================================================
+# =====================================================
 # ESTADOS
-# ==================================================
+# =====================================================
 
 defaults = {
     "canvas_version": 0,
     "saved_drawing": None,
     "selected_color": "#514A7E",
     "paper_color": "#FFFFFF",
-    "paper_pattern": "Lisa",
+    "paper_type": "Lisa",
+    "paper_size": "A4 horizontal",
+    "finished": False,
+    "final_image": None,
+    "last_config": None,
     "tool": "Lápiz",
     "brush_size": 6,
-    "opacity": 100
+    "opacity": 100,
+    "finish_requested": False
 }
 
 for key, value in defaults.items():
@@ -163,415 +181,519 @@ for key, value in defaults.items():
         st.session_state[key] = value
 
 
-# ==================================================
+# =====================================================
 # FUNCIONES
-# ==================================================
+# =====================================================
 
-CANVAS_WIDTH = 900
-CANVAS_HEIGHT = 520
+def make_paper(color, pattern, width, height):
+    image = Image.new("RGB", (width, height), color)
+    draw = ImageDraw.Draw(image)
+    pattern_color = "#DCE0E8"
 
+    if pattern == "Cuadriculado":
+        for x in range(0, width, 30):
+            draw.line((x, 0, x, height), fill=pattern_color, width=1)
+        for y in range(0, height, 30):
+            draw.line((0, y, width, y), fill=pattern_color, width=1)
 
-def create_paper(color, pattern):
-    """Genera una hoja horizontal con el patrón elegido."""
+    elif pattern == "Punteado":
+        for x in range(12, width, 25):
+            for y in range(12, height, 25):
+                draw.ellipse((x-1, y-1, x+1, y+1), fill=pattern_color)
 
-    paper = Image.new(
-        "RGB",
-        (CANVAS_WIDTH, CANVAS_HEIGHT),
-        color
-    )
+    elif pattern == "Rayado":
+        for y in range(35, height, 35):
+            draw.line((0, y, width, y), fill=pattern_color, width=1)
 
-    draw = ImageDraw.Draw(paper)
-    pattern_color = "#DDE0E8"
-
-    if pattern == "Cuadriculada":
-
-        step = 28
-
-        for x in range(0, CANVAS_WIDTH, step):
-            draw.line(
-                (x, 0, x, CANVAS_HEIGHT),
-                fill=pattern_color,
-                width=1
-            )
-
-        for y in range(0, CANVAS_HEIGHT, step):
-            draw.line(
-                (0, y, CANVAS_WIDTH, y),
-                fill=pattern_color,
-                width=1
-            )
-
-    elif pattern == "Punteada":
-
-        step = 24
-
-        for x in range(12, CANVAS_WIDTH, step):
-            for y in range(12, CANVAS_HEIGHT, step):
-                draw.ellipse(
-                    (x-1, y-1, x+1, y+1),
-                    fill=pattern_color
-                )
-
-    elif pattern == "Rayada":
-
-        for y in range(35, CANVAS_HEIGHT, 35):
-            draw.line(
-                (0, y, CANVAS_WIDTH, y),
-                fill=pattern_color,
-                width=1
-            )
-
-    return paper
+    return image
 
 
-def make_png(image_data):
-    """Convierte el resultado del lienzo en PNG."""
-
-    image = Image.fromarray(image_data).convert("RGBA")
-
+def export_png(image_array):
+    image = Image.fromarray(
+        np.asarray(image_array).astype("uint8")
+    ).convert("RGBA")
     buffer = BytesIO()
     image.save(buffer, format="PNG")
-
     return buffer.getvalue()
 
 
-# ==================================================
-# CABECERA
-# ==================================================
-
-st.markdown("""
-<div class="hero">
-    <h1>✿ Creative Notebook</h1>
-    <p>Your little creative space · Dibuja, experimenta y crea.</p>
-</div>
-""", unsafe_allow_html=True)
+def change_canvas():
+    st.session_state.canvas_version += 1
 
 
-# ==================================================
-# BARRA SUPERIOR: ACCIONES PRINCIPALES
-# ==================================================
-
-st.markdown('<div class="toolbar">', unsafe_allow_html=True)
-
-top_left, top_middle, top_right = st.columns(
-    [2.2, 2, 2.2]
-)
-
-with top_left:
-
-    st.markdown("**✦ Acciones rápidas**")
-
-with top_middle:
-
-    st.caption("Deshacer y rehacer: controles sobre el lienzo")
-
-with top_right:
-
-    st.caption("Creative Notebook · Hoja horizontal")
-
-# Placeholders para los botones que necesitan el resultado del lienzo
-action_placeholder = st.empty()
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ==================================================
-# BARRA DE HERRAMIENTAS
-# ==================================================
-
-st.markdown('<div class="toolbar">', unsafe_allow_html=True)
-
-tool_col, size_col, opacity_col, color_col, paper_col = st.columns(
-    [2.1, 1.5, 1.5, 1.7, 1.7]
-)
-
-with tool_col:
-
-    tool_options = [
-        "✏️ Lápiz",
-        "🖌️ Pincel",
-        "🖍️ Marcador",
-        "📏 Línea",
-        "▭ Rectángulo",
-        "⭕ Círculo",
-        "⬡ Polígono",
-        "• Punto",
-        "T Texto",
-        "🧽 Borrador"
-    ]
-
-    selected_tool = st.selectbox(
-        "Herramienta",
-        tool_options,
-        index=tool_options.index(
-            st.session_state.tool
-        ) if st.session_state.tool in tool_options else 0
-    )
-
-    st.session_state.tool = selected_tool
-
-
-with size_col:
-
-    st.session_state.brush_size = st.slider(
-        "Grosor",
-        1,
-        35,
-        st.session_state.brush_size
-    )
-
-
-with opacity_col:
-
-    st.session_state.opacity = st.slider(
-        "Opacidad",
-        10,
-        100,
-        st.session_state.opacity,
-        step=5
-    )
-
-
-with color_col:
-
-    st.session_state.selected_color = st.color_picker(
-        "Color del trazo",
-        st.session_state.selected_color,
-        key="drawing_color"
-    )
-
-
-with paper_col:
-
-    with st.popover("📄 Papel y formato", use_container_width=True):
-
-        st.markdown("### Diseño de la hoja")
-
-        paper_pattern = st.selectbox(
-            "Tipo de papel",
-            [
-                "Lisa",
-                "Cuadriculada",
-                "Punteada",
-                "Rayada"
-            ],
-            index=[
-                "Lisa",
-                "Cuadriculada",
-                "Punteada",
-                "Rayada"
-            ].index(st.session_state.paper_pattern)
-        )
-
-        paper_colors = {
-            "Blanco": "#FFFFFF",
-            "Crema": "#FFF9EE",
-            "Rosa pastel": "#FFF0F4",
-            "Lila pastel": "#F5F0FF",
-            "Celeste pastel": "#EEF8FF",
-            "Menta": "#F0FAF4"
-        }
-
-        paper_name = st.selectbox(
-            "Color de la hoja",
-            list(paper_colors.keys()) + ["Personalizado"]
-        )
-
-        if paper_name == "Personalizado":
-            paper_color = st.color_picker(
-                "Elige tu color de papel",
-                st.session_state.paper_color,
-                key="paper_custom_color"
-            )
-        else:
-            paper_color = paper_colors[paper_name]
-
-        if st.button(
-            "Aplicar papel",
-            use_container_width=True
-        ):
-            st.session_state.paper_pattern = paper_pattern
-            st.session_state.paper_color = paper_color
-
-            # Cambia la versión para aplicar el nuevo fondo
-            st.session_state.canvas_version += 1
-
-            st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ==================================================
-# LIENZO CENTRAL
-# ==================================================
-
-st.markdown(
-    '<div class="canvas-area">',
-    unsafe_allow_html=True
-)
-
-tool_modes = {
-    "✏️ Lápiz": "freedraw",
-    "🖌️ Pincel": "freedraw",
-    "🖍️ Marcador": "freedraw",
-    "📏 Línea": "line",
-    "▭ Rectángulo": "rect",
-    "⭕ Círculo": "circle",
-    "⬡ Polígono": "polygon",
-    "• Punto": "point",
-    "T Texto": "text",
-    "🧽 Borrador": "freedraw"
-}
-
-stroke_color = st.session_state.selected_color
-brush_size = st.session_state.brush_size
-opacity = st.session_state.opacity
-
-if st.session_state.tool == "✏️ Lápiz":
-    brush_size = min(brush_size, 5)
-
-elif st.session_state.tool == "🖌️ Pincel":
-    brush_size = max(brush_size, 9)
-
-elif st.session_state.tool == "🖍️ Marcador":
-    brush_size = max(brush_size, 14)
-    opacity = min(opacity, 45)
-
-elif st.session_state.tool == "🧽 Borrador":
-    stroke_color = st.session_state.paper_color
-    opacity = 100
-
-# Simulación de opacidad
-def blend_colors(foreground, background, alpha):
-
-    fg = tuple(
-        int(foreground[i:i+2], 16)
-        for i in (1, 3, 5)
-    )
-
-    bg = tuple(
-        int(background[i:i+2], 16)
-        for i in (1, 3, 5)
-    )
+def blend(fg, bg, alpha):
+    fg_rgb = tuple(int(fg[i:i+2], 16) for i in (1, 3, 5))
+    bg_rgb = tuple(int(bg[i:i+2], 16) for i in (1, 3, 5))
 
     result = tuple(
-        round(fg[i] * alpha / 100 + bg[i] * (1-alpha/100))
+        round(fg_rgb[i] * alpha / 100 + bg_rgb[i] * (1-alpha/100))
         for i in range(3)
     )
 
     return "#{:02X}{:02X}{:02X}".format(*result)
 
 
-stroke_color = blend_colors(
-    stroke_color,
+# =====================================================
+# CABECERA
+# =====================================================
+
+st.markdown("""
+<div class="hero">
+    <div>
+        <h1>✿ Creative Notebook</h1>
+        <p>Your little creative space · Dibuja, experimenta y crea.</p>
+    </div>
+    <div style="color:#756982;font-size:1.5rem;">♡ ✦ ✿</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+# =====================================================
+# PANTALLA FINAL
+# =====================================================
+
+if st.session_state.finished:
+    st.markdown("## ✨ Tu creación está lista")
+
+    if st.session_state.final_image is not None:
+        st.image(st.session_state.final_image, use_container_width=True)
+
+        st.download_button(
+            "⬇️ Descargar ilustración PNG",
+            data=export_png(st.session_state.final_image),
+            file_name="creative_notebook.png",
+            mime="image/png"
+        )
+
+    if st.button("↩ Volver a dibujar"):
+        st.session_state.finished = False
+        st.rerun()
+
+    st.stop()
+
+
+# =====================================================
+# TAMAÑOS
+# =====================================================
+
+paper_sizes = {
+    "A4 horizontal": (790, 560),
+    "A4 vertical": (400, 560),
+    "A3 horizontal": (795, 560),
+    "Cuadrada": (560, 560),
+    "Panorámica": (900, 478),
+    "Libre": (850, 530)
+}
+
+canvas_width, canvas_height = paper_sizes[st.session_state.paper_size]
+
+config = (
     st.session_state.paper_color,
-    opacity
+    st.session_state.paper_type,
+    st.session_state.paper_size
 )
 
-paper = create_paper(
-    st.session_state.paper_color,
-    st.session_state.paper_pattern
-)
+if st.session_state.last_config is None:
+    st.session_state.last_config = config
+elif st.session_state.last_config != config:
+    st.session_state.last_config = config
+    change_canvas()
 
-canvas_result = st_canvas(
-    fill_color=st.session_state.selected_color,
-    stroke_width=brush_size,
-    stroke_color=stroke_color,
-    background_image=paper,
-    background_image_fit="contain",
-    height=CANVAS_HEIGHT,
-    width=CANVAS_WIDTH,
-    drawing_mode=tool_modes[st.session_state.tool],
-    initial_drawing=st.session_state.saved_drawing,
-    point_display_radius=4,
-    update_streamlit=True,
-    display_toolbar=True,
-    return_image_data=True,
-    key=f"creative_canvas_{st.session_state.canvas_version}"
-)
 
-st.markdown('</div>', unsafe_allow_html=True)
+# =====================================================
+# DOS GRANDES PANELES
+# =====================================================
 
-st.caption(
-    "✿ Tu hoja horizontal está lista. "
-    "Puedes deshacer, rehacer y editar tus trazos desde la barra del lienzo."
+intro_column, workspace_column = st.columns(
+    [2.4, 7.6],
+    gap="medium"
 )
 
 
-# ==================================================
-# GUARDAR DIBUJO ACTUAL
-# ==================================================
+# =====================================================
+# PANEL IZQUIERDO: INTRODUCCIÓN
+# =====================================================
 
-if canvas_result.json_data is not None:
-    st.session_state.saved_drawing = canvas_result.json_data
+with intro_column:
+
+    with st.container(height=680, border=False):
+
+        st.markdown("""
+        <div class="intro-panel">
+
+            <div style="text-align:center;font-size:3.5rem;">
+                🌷
+            </div>
+
+            <h3 style="text-align:center;">
+                ¡Bienvenida!
+            </h3>
+
+            <p style="text-align:center;">
+                Este es tu pequeño rincón creativo.
+                Un espacio para imaginar, experimentar
+                y convertir tus ideas en ilustraciones.
+            </p>
+
+            <hr>
+
+            <h3>✿ Sobre Creative Notebook</h3>
+
+            <p>
+                Creative Notebook es una libreta digital
+                diseñada para que puedas dibujar libremente,
+                explorar colores y crear sin límites.
+            </p>
+
+            <hr>
+
+            <h3>♡ ¿Qué puedes hacer?</h3>
+
+            <p>
+                ✏️ Dibujar con diferentes herramientas.
+            </p>
+
+            <p>
+                🎨 Explorar una paleta de colores.
+            </p>
+
+            <p>
+                📄 Personalizar el tipo y color del papel.
+            </p>
+
+            <p>
+                ✨ Crear ilustraciones y guardar tus trabajos.
+            </p>
+
+            <hr>
+
+            <h3>✦ Un pequeño consejo</h3>
+
+            <p>
+                No tengas miedo de probar. Combina colores,
+                juega con las formas y deja que tu imaginación
+                encuentre su propio camino.
+            </p>
+
+            <div style="text-align:center;font-size:1.8rem;padding-top:12px;">
+                ♡ ✿ ♡
+            </div>
+
+            <p style="text-align:center;font-size:.75rem;">
+                Your imagination starts here.
+            </p>
+
+        </div>
+        """, unsafe_allow_html=True)
 
 
-# ==================================================
-# BOTONES SUPERIORES
-# ==================================================
+# =====================================================
+# PANEL DERECHO: ESPACIO DE TRABAJO
+# =====================================================
 
-with action_placeholder.container():
+with workspace_column:
 
-    btn_clear, btn_new, btn_save, btn_download = st.columns(
-        [1.3, 1.3, 1.5, 1.7]
+    st.markdown(
+        '<div class="section-label">✦ Tu espacio de creación</div>',
+        unsafe_allow_html=True
     )
 
-    with btn_clear:
+    # -------------------------------------------------
+    # ACCIONES SUPERIORES
+    # -------------------------------------------------
 
-        if st.button(
-            "🗑️ Borrar hoja",
-            use_container_width=True
-        ):
+    action1, action2, action3 = st.columns([1, 1, 2])
+
+    with action1:
+        if st.button("🗑️ Borrar hoja", use_container_width=True):
             st.session_state.saved_drawing = None
-            st.session_state.canvas_version += 1
+            st.session_state.finish_requested = False
+            change_canvas()
             st.rerun()
 
-    with btn_new:
+    with action2:
+        download_placeholder = st.empty()
 
-        if st.button(
-            "✦ Nuevo tablero",
-            use_container_width=True
-        ):
-            st.session_state.saved_drawing = None
-            st.session_state.selected_color = "#514A7E"
-            st.session_state.paper_color = "#FFFFFF"
-            st.session_state.paper_pattern = "Lisa"
-            st.session_state.tool = "✏️ Lápiz"
-            st.session_state.canvas_version += 1
+    with action3:
+        if st.button("✨ Terminar dibujo", use_container_width=True):
+            st.session_state.finish_requested = True
             st.rerun()
 
-    with btn_save:
+    # -------------------------------------------------
+    # HERRAMIENTAS Y TABLERO
+    # -------------------------------------------------
 
-        if canvas_result.image_data is not None:
+    left_tools, canvas_area, right_tools = st.columns(
+        [0.8, 8, 0.8],
+        gap="small",
+        vertical_alignment="center"
+    )
 
-            st.download_button(
-                "💾 Guardar imagen",
-                data=make_png(canvas_result.image_data),
-                file_name="mi_creative_notebook.png",
-                mime="image/png",
-                use_container_width=True
+    # HERRAMIENTAS IZQUIERDAS
+
+    with left_tools:
+
+        if st.button("✏️", help="Lápiz", use_container_width=True):
+            st.session_state.tool = "Lápiz"
+
+        if st.button("🖌️", help="Pincel", use_container_width=True):
+            st.session_state.tool = "Pincel"
+
+        if st.button("🖍️", help="Marcador", use_container_width=True):
+            st.session_state.tool = "Marcador"
+
+        if st.button("╱", help="Línea", use_container_width=True):
+            st.session_state.tool = "Línea"
+
+        if st.button("▭", help="Rectángulo", use_container_width=True):
+            st.session_state.tool = "Rectángulo"
+
+        if st.button("◯", help="Círculo", use_container_width=True):
+            st.session_state.tool = "Círculo"
+
+        if st.button("⬡", help="Polígono", use_container_width=True):
+            st.session_state.tool = "Polígono"
+
+        if st.button("T", help="Texto", use_container_width=True):
+            st.session_state.tool = "Texto"
+
+        if st.button("🧽", help="Borrador", use_container_width=True):
+            st.session_state.tool = "Borrador"
+
+    # AJUSTES DERECHOS
+
+    with right_tools:
+
+        with st.popover("⚙️", help="Ajustes", use_container_width=True):
+            st.markdown("### 🖌️ Ajustes del trazo")
+
+            st.session_state.brush_size = st.slider(
+                "Grosor", 1, 40, st.session_state.brush_size
             )
 
-    with btn_download:
-
-        if canvas_result.image_data is not None:
-
-            st.download_button(
-                "⬇️ Descargar PNG",
-                data=make_png(canvas_result.image_data),
-                file_name="mi_dibujo.png",
-                mime="image/png",
-                use_container_width=True
+            st.session_state.opacity = st.slider(
+                "Opacidad", 10, 100,
+                st.session_state.opacity, step=5
             )
 
+        with st.popover("🎨", help="Colores", use_container_width=True):
 
-# ==================================================
+            st.markdown("### Paleta de colores")
+
+            palette = {
+                "Rosa": "#F19AB5",
+                "Durazno": "#F5B99B",
+                "Amarillo": "#F4D477",
+                "Menta": "#A8DCC5",
+                "Celeste": "#9CCFE5",
+                "Lavanda": "#BDB0E8",
+                "Lila": "#D9A9D8",
+                "Coral": "#E98282",
+                "Carbón": "#454052",
+                "Blanco": "#FFFFFF"
+            }
+
+            for name, color in palette.items():
+                if st.button(
+                    f"● {name}",
+                    key=f"color_{name}",
+                    use_container_width=True
+                ):
+                    st.session_state.selected_color = color
+                    st.rerun()
+
+            st.session_state.selected_color = st.color_picker(
+                "Color personalizado",
+                value=st.session_state.selected_color,
+                key="custom_color"
+            )
+
+        with st.popover("📄", help="Papel", use_container_width=True):
+
+            st.markdown("### 📄 Mi papel")
+
+            new_size = st.selectbox(
+                "Formato",
+                list(paper_sizes.keys()),
+                index=list(paper_sizes.keys()).index(
+                    st.session_state.paper_size
+                )
+            )
+
+            new_pattern = st.selectbox(
+                "Tipo de hoja",
+                ["Lisa", "Cuadriculado", "Punteado", "Rayado"],
+                index=["Lisa", "Cuadriculado", "Punteado", "Rayado"].index(
+                    st.session_state.paper_type
+                )
+            )
+
+            new_color = st.selectbox(
+                "Color del papel",
+                [
+                    "Blanco", "Crema", "Rosa suave",
+                    "Lila suave", "Celeste suave",
+                    "Verde menta", "Personalizado"
+                ]
+            )
+
+            paper_colors = {
+                "Blanco": "#FFFFFF",
+                "Crema": "#FFF9EE",
+                "Rosa suave": "#FFF0F4",
+                "Lila suave": "#F5F0FF",
+                "Celeste suave": "#EEF8FF",
+                "Verde menta": "#F0FAF4"
+            }
+
+            if new_color == "Personalizado":
+                chosen_paper_color = st.color_picker(
+                    "Elige el color",
+                    st.session_state.paper_color,
+                    key="custom_paper"
+                )
+            else:
+                chosen_paper_color = paper_colors[new_color]
+
+            if st.button("Aplicar cambios", use_container_width=True):
+                st.session_state.paper_size = new_size
+                st.session_state.paper_type = new_pattern
+                st.session_state.paper_color = chosen_paper_color
+                st.rerun()
+
+        with st.popover("✨", help="Más acciones", use_container_width=True):
+
+            st.markdown("### Acciones")
+
+            if st.button("↻ Nuevo cuaderno", use_container_width=True):
+                st.session_state.saved_drawing = None
+                st.session_state.selected_color = "#514A7E"
+                st.session_state.paper_color = "#FFFFFF"
+                st.session_state.paper_type = "Lisa"
+                st.session_state.paper_size = "A4 horizontal"
+                st.session_state.last_config = None
+                change_canvas()
+                st.rerun()
+
+    # -------------------------------------------------
+    # TABLERO CENTRAL
+    # -------------------------------------------------
+
+    with canvas_area:
+
+        tool_modes = {
+            "Lápiz": "freedraw",
+            "Pincel": "freedraw",
+            "Marcador": "freedraw",
+            "Línea": "line",
+            "Rectángulo": "rect",
+            "Círculo": "circle",
+            "Polígono": "polygon",
+            "Texto": "text",
+            "Borrador": "freedraw"
+        }
+
+        stroke = st.session_state.selected_color
+        size = st.session_state.brush_size
+        opacity = st.session_state.opacity
+
+        if st.session_state.tool == "Lápiz":
+            size = min(size, 5)
+
+        elif st.session_state.tool == "Pincel":
+            size = max(size, 9)
+
+        elif st.session_state.tool == "Marcador":
+            size = max(size, 14)
+            opacity = min(opacity, 45)
+
+        elif st.session_state.tool == "Borrador":
+            stroke = st.session_state.paper_color
+            opacity = 100
+
+        stroke = blend(
+            stroke,
+            st.session_state.paper_color,
+            opacity
+        )
+
+        paper_image = make_paper(
+            st.session_state.paper_color,
+            st.session_state.paper_type,
+            canvas_width,
+            canvas_height
+        )
+
+        st.markdown('<div class="canvas-card">', unsafe_allow_html=True)
+
+        st.markdown(
+            f"<div style='text-align:center;color:#796D83;"
+            f"font-weight:700;padding:4px 0 10px;'>"
+            f"✿ {st.session_state.paper_size} · "
+            f"{st.session_state.paper_type}</div>",
+            unsafe_allow_html=True
+        )
+
+        canvas_result = st_canvas(
+            fill_color=st.session_state.selected_color,
+            stroke_width=size,
+            stroke_color=stroke,
+            background_image=paper_image,
+            height=canvas_height,
+            width=canvas_width,
+            drawing_mode=tool_modes[st.session_state.tool],
+            point_display_radius=4,
+            initial_drawing=st.session_state.saved_drawing,
+            update_streamlit=True,
+            return_image_data=True,
+            key=f"creative_canvas_{st.session_state.canvas_version}"
+        )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if canvas_result.json_data is not None:
+            st.session_state.saved_drawing = canvas_result.json_data
+
+        if canvas_result.image_data is not None:
+            current_image = np.asarray(
+                canvas_result.image_data
+            ).astype("uint8")
+        else:
+            current_image = np.asarray(
+                paper_image.convert("RGBA")
+            )
+
+        current_png = export_png(current_image)
+
+        with download_placeholder.container():
+            st.download_button(
+                "⬇️ Guardar imagen",
+                data=current_png,
+                file_name="creative_notebook.png",
+                mime="image/png",
+                use_container_width=True,
+                key="top_download"
+            )
+
+        if st.session_state.finish_requested:
+
+            if canvas_result.image_data is not None:
+                st.session_state.final_image = current_image
+                st.session_state.finished = True
+                st.session_state.finish_requested = False
+                st.rerun()
+            else:
+                st.warning("Primero realiza un dibujo.")
+                st.session_state.finish_requested = False
+
+
+# =====================================================
 # PIE
-# ==================================================
+# =====================================================
 
 st.markdown("""
 <div style="text-align:center;color:#A397AA;
 font-size:12px;padding-top:10px;">
-Creative Notebook · Crea a tu manera ✿
+Creative Notebook · Un espacio para crear a tu manera ✿
 </div>
 """, unsafe_allow_html=True)
