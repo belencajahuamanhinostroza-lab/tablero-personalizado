@@ -1,9 +1,13 @@
 
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-from PIL import Image, ImageDraw
+from PIL import Image
 from io import BytesIO
 import numpy as np
+
+# =====================================================
+# CONFIGURACIÓN
+# =====================================================
 
 st.set_page_config(
     page_title="Creative Notebook",
@@ -48,7 +52,12 @@ st.markdown("""
 }
 
 .hero {
-    background: linear-gradient(110deg, #F8DCE8, #FBEBD3, #E9E3FA);
+    background: linear-gradient(
+        110deg,
+        #F8DCE8,
+        #FBEBD3,
+        #E9E3FA
+    );
     border: 1px solid white;
     border-radius: 20px;
     padding: 16px 24px;
@@ -100,11 +109,18 @@ st.markdown("""
 }
 
 .canvas-card {
-    background: rgba(255,255,255,.8);
+    background: linear-gradient(
+        145deg,
+        #FFFFFF,
+        #FBF7FF,
+        #F5FBF8
+    );
     border: 1px solid #E9DFED;
     border-radius: 18px;
     padding: 12px;
     box-shadow: 0 7px 25px rgba(90,70,110,.06);
+    width: 100%;
+    overflow-x: auto;
 }
 
 .section-label {
@@ -129,13 +145,6 @@ st.markdown("""
     background: #F6ECFA;
     border-color: #D8C1E5;
     color: #63566E;
-}
-
-.stPopover > button {
-    border-radius: 12px;
-    background: white;
-    border: 1px solid #E9DFED;
-    color: #665A72;
 }
 
 [data-testid="stVerticalBlock"] {
@@ -207,8 +216,9 @@ st.markdown("""
 # =====================================================
 
 intro_column, workspace_column = st.columns(
-    [2.5, 7.5],
-    gap="medium"
+    [2.3, 7.7],
+    gap="large",
+    vertical_alignment="top"
 )
 
 
@@ -218,57 +228,55 @@ intro_column, workspace_column = st.columns(
 
 with intro_column:
 
-    with st.container(height=650, border=False):
+    st.markdown("""
+    <div class="intro-panel">
 
-        st.markdown("""
-        <div class="intro-panel">
-
-            <div style="text-align:center;font-size:3.5rem;">
-                🌷
-            </div>
-
-            <h3 style="text-align:center;">
-                ¡Bienvenida!
-            </h3>
-
-            <p style="text-align:center;">
-                Este es tu pequeño rincón creativo.
-                Un espacio para imaginar, experimentar
-                y convertir tus ideas en ilustraciones.
-            </p>
-
-            <hr>
-
-            <h3>✿ ¿Cómo empezar?</h3>
-
-            <p>✏️ <b>1. Dibuja:</b> utiliza el lápiz sobre tu hoja.</p>
-
-            <p>🎨 <b>2. Elige:</b> selecciona tu color favorito.</p>
-
-            <p>📄 <b>3. Personaliza:</b> cambia el color del papel.</p>
-
-            <p>⬇️ <b>4. Guarda:</b> descarga tu creación en PNG.</p>
-
-            <hr>
-
-            <h3>♡ Un pequeño consejo</h3>
-
-            <p>
-                No tengas miedo de probar. Combina colores,
-                juega con las formas y deja que tu imaginación
-                encuentre su propio camino.
-            </p>
-
-            <div style="text-align:center;font-size:1.8rem;padding-top:12px;">
-                ♡ ✿ ♡
-            </div>
-
-            <p style="text-align:center;font-size:.75rem;">
-                Your imagination starts here.
-            </p>
-
+        <div style="text-align:center;font-size:3.5rem;">
+            🌷
         </div>
-        """, unsafe_allow_html=True)
+
+        <h3 style="text-align:center;">
+            ¡Bienvenida!
+        </h3>
+
+        <p style="text-align:center;">
+            Este es tu pequeño rincón creativo.
+            Un espacio para imaginar, experimentar
+            y convertir tus ideas en ilustraciones.
+        </p>
+
+        <hr>
+
+        <h3>✿ ¿Cómo empezar?</h3>
+
+        <p>✏️ <b>1. Dibuja:</b> utiliza el lápiz sobre tu hoja.</p>
+
+        <p>🎨 <b>2. Elige:</b> selecciona tu color favorito.</p>
+
+        <p>📄 <b>3. Personaliza:</b> cambia el color del papel.</p>
+
+        <p>⬇️ <b>4. Guarda:</b> descarga tu creación en PNG.</p>
+
+        <hr>
+
+        <h3>♡ Un pequeño consejo</h3>
+
+        <p>
+            No tengas miedo de probar. Combina colores,
+            juega con las formas y deja que tu imaginación
+            encuentre su propio camino.
+        </p>
+
+        <div style="text-align:center;font-size:1.8rem;padding-top:12px;">
+            ♡ ✿ ♡
+        </div>
+
+        <p style="text-align:center;font-size:.75rem;">
+            Your imagination starts here.
+        </p>
+
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # =====================================================
@@ -283,15 +291,20 @@ with workspace_column:
     )
 
     # -------------------------------------------------
-    # HERRAMIENTAS
+    # CONFIGURACIONES
     # -------------------------------------------------
 
-    tool_col, color_col, paper_col, size_col = st.columns(
-        [1.3, 2.2, 2.2, 2]
+    config1, config2, config3, config4 = st.columns(
+        [1.2, 1.5, 1.8, 1.8],
+        gap="medium",
+        vertical_alignment="bottom"
     )
 
-    with tool_col:
-        selected_tool = st.selectbox(
+    # HERRAMIENTA
+
+    with config1:
+
+        st.session_state.tool = st.selectbox(
             "Herramienta",
             ["Lápiz", "Borrador"],
             index=["Lápiz", "Borrador"].index(
@@ -299,9 +312,10 @@ with workspace_column:
             )
         )
 
-        st.session_state.tool = selected_tool
+    # COLOR
 
-    with color_col:
+    with config2:
+
         palette = {
             "Morado": "#514A7E",
             "Rosa": "#F19AB5",
@@ -313,17 +327,28 @@ with workspace_column:
             "Coral": "#E98282"
         }
 
+        color_names = list(palette.keys())
+
+        current_index = (
+            list(palette.values()).index(
+                st.session_state.selected_color
+            )
+            if st.session_state.selected_color in palette.values()
+            else 0
+        )
+
         selected_name = st.selectbox(
             "Color",
-            list(palette.keys()),
-            index=list(palette.values()).index(
-                st.session_state.selected_color
-            ) if st.session_state.selected_color in palette.values() else 0
+            color_names,
+            index=current_index
         )
 
         st.session_state.selected_color = palette[selected_name]
 
-    with paper_col:
+    # COLOR DEL PAPEL
+
+    with config3:
+
         paper_options = {
             "Blanco": "#FFFFFF",
             "Crema": "#FFF9EE",
@@ -333,12 +358,20 @@ with workspace_column:
             "Verde menta": "#F0FAF4"
         }
 
+        paper_names = list(paper_options.keys())
+
+        paper_index = (
+            list(paper_options.values()).index(
+                st.session_state.paper_color
+            )
+            if st.session_state.paper_color in paper_options.values()
+            else 0
+        )
+
         paper_name = st.selectbox(
             "Color del papel",
-            list(paper_options.keys()),
-            index=list(paper_options.values()).index(
-                st.session_state.paper_color
-            ) if st.session_state.paper_color in paper_options.values() else 0
+            paper_names,
+            index=paper_index
         )
 
         new_paper_color = paper_options[paper_name]
@@ -348,39 +381,36 @@ with workspace_column:
             clear_canvas()
             st.rerun()
 
-    with size_col:
+    # GROSOR
+
+    with config4:
+
         st.session_state.brush_size = st.slider(
-            "Grosor del lápiz",
+            "Grosor",
             min_value=1,
             max_value=25,
             value=st.session_state.brush_size
         )
 
     # -------------------------------------------------
-    # BOTONES
+    # BOTÓN LIMPIAR
     # -------------------------------------------------
 
-    button1, button2 = st.columns(2)
-
-    with button1:
-        if st.button("🗑️ Limpiar hoja", use_container_width=True):
-            clear_canvas()
-            st.rerun()
-
-    with button2:
-        st.markdown(
-            '<div style="height:1px;"></div>',
-            unsafe_allow_html=True
-        )
+    if st.button("🗑️ Limpiar hoja", use_container_width=True):
+        clear_canvas()
+        st.rerun()
 
     # -------------------------------------------------
-    # LIENZO
+    # TABLERO
     # -------------------------------------------------
+
+    canvas_width = 700
+    canvas_height = 500
 
     paper_image = make_paper(
         st.session_state.paper_color,
-        790,
-        560
+        canvas_width,
+        canvas_height
     )
 
     stroke = (
@@ -403,8 +433,8 @@ with workspace_column:
         stroke_width=st.session_state.brush_size,
         stroke_color=stroke,
         background_image=paper_image,
-        height=560,
-        width=790,
+        height=canvas_height,
+        width=canvas_width,
         drawing_mode="freedraw",
         initial_drawing=st.session_state.saved_drawing,
         update_streamlit=True,
@@ -415,8 +445,11 @@ with workspace_column:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # -------------------------------------------------
-    # GUARDAR DIBUJO
+    # RECUPERAR DIBUJO
     # -------------------------------------------------
+
+    if canvas_result.json_data is not None:
+        st.session_state.saved_drawing = canvas_result.json_data
 
     current_image = None
 
@@ -427,14 +460,14 @@ with workspace_column:
 
     if current_image is not None:
         current_image = np.asarray(current_image).astype("uint8")
-
     else:
         current_image = np.asarray(
             paper_image.convert("RGBA")
         )
 
-    if canvas_result.json_data is not None:
-        st.session_state.saved_drawing = canvas_result.json_data
+    # -------------------------------------------------
+    # DESCARGAR
+    # -------------------------------------------------
 
     st.download_button(
         "⬇️ Guardar mi dibujo",
